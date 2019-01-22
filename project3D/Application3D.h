@@ -2,7 +2,7 @@
 
 #include "Application.h"
 #include <glm/mat4x4.hpp>
-
+#include "Vector2.h"
 class Application3D : public aie::Application {
 public:
 
@@ -14,6 +14,8 @@ public:
 
 	virtual void update(float deltaTime);
 	virtual void draw();
+
+	void store();
 
 protected:
 
