@@ -98,7 +98,7 @@ void Application3D::update(float deltaTime) {
 	base_turret = tank_base * turret_trans * turret_rot;
 	turret_barrel = base_turret * barrel_trans * barrel_rot;
 
-	vec3 forward = tank_base[2]*(10 * deltaTime);
+	vec3 forward = tank_base[2]*(5 * deltaTime);
 
 	// query time since application started
 	float time = getTime();
