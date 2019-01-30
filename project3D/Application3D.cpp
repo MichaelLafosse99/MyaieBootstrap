@@ -21,17 +21,22 @@ Application3D::~Application3D() {
 
 }
 
-mat4 tank_rot(1);
-mat4 turret_rot(1);
-mat4 barrel_rot(1);
-mat4 tank_trans(1);
-mat4 turret_trans(1);
-mat4 barrel_trans(1);
-
+//Identity Matrices:
 glm::mat4 world(1);
+glm::mat4 tank_rot(1);
+glm::mat4 turret_rot(1);
+glm::mat4 barrel_rot(1);
+glm::mat4 tank_trans(1);
+glm::mat4 turret_trans(1);
+glm::mat4 barrel_trans(1);
+glm::mat4 bullet_trans(1);
+glm::mat4 bullet_rot(1);
+
+//Offsets:
 glm::mat4 tank_base = world;
 glm::mat4 base_turret = tank_base * turret_trans * turret_rot;
 glm::mat4 turret_barrel = base_turret * barrel_trans * barrel_rot;
+glm::mat4 barrel_bullet = turret_barrel * bullet_trans * bullet_rot;
 
 bool Application3D::startup() {
 
@@ -46,10 +51,13 @@ bool Application3D::startup() {
 		getWindowWidth() / (float)getWindowHeight(),
 		0.1f, 1000.f);
 
+	//Setting the "starting positions":
 	turret_trans = glm::translate(vec3(0, .2, 0));
 	barrel_trans = glm::translate(vec3(.6, .2, 0));
-	barrel_rot = glm::rotate(1.70f, vec3(0, 0, 1));
+	barrel_rot = glm::rotate(-1.45f, vec3(0, 0, 1));
 	turret_rot = glm::rotate(4.7f, vec3(0, 1, 0));
+	bullet_trans = glm::translate(vec3(0, .2, 0));
+	bullet_rot = glm::rotate(0.0f, vec3(0, 1, 0));
 
 	return true;
 }
@@ -74,59 +82,31 @@ void grid()
 	}
 }
 
-float degrees = 90.0f;
-float degrees2 = 90.0f;
-
-//old bodies
-//vec3 tankBody(0, 0, 0);
-//vec3 sphereBody(0, 0.5, 0);
-//vec3 cylinderBody(0, 1, 1.7);
-
-/*vec3 camera(15, 15, 0);*/
 float camera = .5f;
 
 void Application3D::update(float deltaTime) {
 
-	//glm::mat4 michealisatampon = glm::mat4(
-	//	1.0f, 1.0f, 1.0f, 1.0f,
-	//	2.0f, 2.0f, 2.0f, 2.0f,
-	//	3.0f, 3.0f, 3.0f, 3.0f,
-	//	4.0f, 4.0f, 4.0f, 4.0f
-	//	);
-	
+	//Offsetting in update:
 	tank_base = world * tank_trans * tank_rot;
 	base_turret = tank_base * turret_trans * turret_rot;
 	turret_barrel = base_turret * barrel_trans * barrel_rot;
+	barrel_bullet = turret_barrel * bullet_trans * bullet_rot;
 
-	vec3 forward = tank_base[2]*(5 * deltaTime);
+	//Makes the tank move forwar:
+	vec3 forward = tank_base[2] * (2 * deltaTime);
+
+	//Used to have the camera focus on tank:
+	vec3 camera2 = tank_trans[3];
 
 	// query time since application started
 	float time = getTime();
 
 	// rotate camera
 	m_viewMatrix = glm::lookAt(vec3(glm::sin(camera) * 20, 10, glm::cos(camera) * 15),
-		vec3(0), vec3(0, 1, 0));
+		camera2, vec3(0, 1, 0));
 
 	// wipe the gizmos clean for this frame
 	Gizmos::clear();
-
-	//const glm::mat4* cylinderRotation = new glm::mat4(
-	//1.0f, .0f,			.0f,		   .0f,
-	//0.0f, cos(degrees), sin(degrees), .0f,
-	//.0f, -sin(degrees), cos(degrees),   0.0f,
-	//.0f, .0f,		   .0f,			   1.0f);
-
-	//const glm::mat4* squareRotation = new glm::mat4(
-	//cos(degrees2), 0.0f, -sin(degrees2), .0f,
-	//0.0f,		   1.0f, 0.0f,			 .0f,
-	//sin(degrees2), 0.0f, cos(degrees2),  .0f,
-	//.0f,		   .0f,	 0.0f,			 1.0f);
-	//
-	//const glm::mat4* sphereRotation = new glm::mat4(
-	//cos(degrees2), 0.0f, -sin(degrees2), .0f,
-	//0.0f,		   1.0f, 0.0f,			 .0f,
-	//sin(degrees2), 0.0f, cos(degrees2),  .0f,
-	//.0f,		   .0f,	 0.0f,			 1.0f);
 
 	grid();
 
@@ -134,9 +114,11 @@ void Application3D::update(float deltaTime) {
 	Gizmos::addTransform(mat4(1));
 
 	// demonstrate a few shapes
-	Gizmos::addAABBFilled(tank_base[3], vec3(1, .5, 1.5), vec4(0, 0.5f, 1, 0.25f), &tank_base);
-	Gizmos::addSphere(base_turret[3], 1, 8, 8, vec4(1, 0, 0, 0.5f), &base_turret);
-	Gizmos::addCylinderFilled(turret_barrel[3], .2f, 1, 20, vec4(1, 0, 0, 0.5f), &turret_barrel);
+	//The shapes that make up the tank:
+	Gizmos::addAABBFilled(tank_base[3], vec3(1, .5, 1.5), vec4(0, .1f, 1, 1), &tank_base);
+	Gizmos::addSphere(base_turret[3], 1, 8, 8, vec4(1, 0, 0, 1), &base_turret);
+	Gizmos::addCylinderFilled(turret_barrel[3], .2f, 1, 20, vec4(0.5f, 0.5f, 0.5f, 1), &turret_barrel);
+	
 
 	// quit if we press escape
 	aie::Input* input = aie::Input::getInstance();
@@ -146,57 +128,51 @@ void Application3D::update(float deltaTime) {
 
 	////////////////////////////////////////////
 
-		//Rotates the barrel
+		//Rotates the barrel, the bullet follows:
 	if (input->isKeyDown(aie::INPUT_KEY_UP))
 	{
-		barrel_rot = barrel_rot * glm::rotate(.1f, vec3(0, 0, 1));
+		barrel_rot = barrel_rot * glm::rotate(.062f, vec3(0, 0, 1));
 	}
 	if (input->isKeyDown(aie::INPUT_KEY_DOWN))
 	{
-		barrel_rot = barrel_rot * glm::rotate(-.1f, vec3(0, 0, 1));
+		barrel_rot = barrel_rot * glm::rotate(-.062f, vec3(0, 0, 1));
 	}
 
-	//Rotates the body and sphere
+	//Rotates the turret, the barrel follows:
 	if (input->isKeyDown(aie::INPUT_KEY_RIGHT))
 	{
-		turret_rot = turret_rot * glm::rotate(.1f, vec3(0, 1, 0));
+		turret_rot = turret_rot * glm::rotate(.082f, vec3(0, 1, 0));
 	}
 	if (input->isKeyDown(aie::INPUT_KEY_LEFT))
 	{
-		turret_rot = turret_rot * glm::rotate(-.1f, vec3(0, 1, 0));
+		turret_rot = turret_rot * glm::rotate(-.082f, vec3(0, 1, 0));
 	}
 
 	////////////////////////////////////////////
 
-		//Tank body movement
+		//Tank movement:
 	if (input->isKeyDown(aie::INPUT_KEY_W))
 	{
 		tank_trans = tank_trans * glm::translate(forward);
-
-		/*tankBody = tankBody + moveUp * 5.0f * deltaTime;
-		sphereBody = sphereBody + moveUp * 5.0f * deltaTime;
-		cylinderBody = cylinderBody + moveUp * 5.0f * deltaTime;*/
 	}
 
 	if (input->isKeyDown(aie::INPUT_KEY_S))
 	{
 		tank_trans = tank_trans * glm::translate(-forward);
-
-		/*tankBody = tankBody - moveUp * 5.0f * deltaTime;
-		sphereBody = sphereBody - moveUp * 5.0f * deltaTime;
-		cylinderBody = cylinderBody - moveUp * 5.0f * deltaTime;*/
 	}
 
+	//Rotates tank base, everything follows: 
 	if (input->isKeyDown(aie::INPUT_KEY_A))
 	{
-		tank_rot = tank_rot * glm::rotate(.1f, vec3(0, 1, 0));
+		tank_rot = tank_rot * glm::rotate(.07f, vec3(0, 1, 0));
 	}
 
 	if (input->isKeyDown(aie::INPUT_KEY_D))
 	{
-		tank_rot = tank_rot * glm::rotate(-.1f, vec3(0, 1, 0));
+		tank_rot = tank_rot * glm::rotate(-.07f, vec3(0, 1, 0));
 	}
 
+	//Rotates camera:
 	if (input->isKeyDown(aie::INPUT_KEY_Q))
 	{
 		camera += 2 * deltaTime;
@@ -206,6 +182,25 @@ void Application3D::update(float deltaTime) {
 	{
 		camera += -2 * deltaTime;
 	}
+
+	////////////////////////////////////////////
+
+	//Shoots bullet:
+	if (input->isKeyDown(aie::INPUT_KEY_SPACE))
+	{
+		Gizmos::addCapsule(barrel_bullet[3], 1, .15, 8, 8, vec4(1, 0.25f, 0, 1), &barrel_bullet);
+
+		bullet_trans = bullet_trans * glm::translate(vec3(0, 1, 0));
+	}
+
+	//"Respawns" bullet:
+	if (input->isKeyUp(aie::INPUT_KEY_SPACE))
+	{
+		Gizmos::addCapsule(barrel_bullet[3], 1, .15, 8, 8, vec4(1, 0.25f, 0, 1), &barrel_bullet);
+
+		bullet_trans = glm::translate(vec3(0, .2, 0));
+	}
+
 	////////////////////////////////////////////
 }
 
@@ -231,10 +226,6 @@ void Application3D::store()
 	Gizmos::addRing(vec3(5, 0, -5), 1, 1.5f, 8, vec4(0, 1, 0, 1));
 	Gizmos::addDisk(vec3(-5, 0, 5), 1, 16, vec4(1, 1, 0, 1));
 	Gizmos::addArc(vec3(-5, 0, -5), 0, 2, 1, 8, vec4(1, 0, 1, 1));
-
-	/*mat4 t = glm::rotate(mat4(1), time, glm::normalize(vec3(1, 1, 1)));
-	t[3] = vec4(-2, 0, 0, 1);
-	Gizmos::addCylinderFilled(vec3(0), 0.5f, 1, 5, vec4(0, 1, 1, 1), &t);*/
 
 	// demonstrate 2D gizmos
 	Gizmos::add2DAABB(glm::vec2(getWindowWidth() / 2, 100),
